@@ -1,0 +1,48 @@
+# Default experiment configuration
+# All values here mirror the dataclass defaults in src/config.py
+# Override via Hydra CLI: python train.py audio.sample_rate=22050
+
+audio:
+  sample_rate: 16000
+  duration_sec: 5.0
+
+mel:
+  n_fft: 1024
+  hop_length: 512
+  n_mels: 128
+  f_min: 50.0
+  f_max: 8000.0
+
+noise:
+  snr_levels_db: [20.0, 15.0, 10.0, 5.0, 0.0, -5.0]
+  snr_train_range: [0.0, 20.0]
+
+model:
+  num_classes: 4
+  class_names: ["Normal", "Crackle", "Wheeze", "Both"]
+  cnn_channels: [32, 64, 128, 256]
+  dropout: 0.3
+  focal_loss_gamma: 2.0
+
+train:
+  batch_size: 32
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  num_epochs: 50
+  patience: 10
+  k_folds: 5
+  seed: 42
+
+augment:
+  spec_augment_freq_masks: 2
+  spec_augment_freq_width: 10
+  spec_augment_time_masks: 2
+  spec_augment_time_width: 25
+  mixup_alpha: 0.4
+
+paths:
+  data_dir: "data/"
+  icbhi_dir: "data/icbhi/"
+  noise_dir: "data/noise/"
+  output_dir: "outputs/"
+  checkpoint_dir: "outputs/checkpoints/"
