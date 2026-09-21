@@ -17,6 +17,7 @@ plotly>=5.15.0
 
 # Explainability
 captum>=0.7.0
+shap>=0.42.0
 
 # Metrics
 scikit-image>=0.21.0  # for SSIM
