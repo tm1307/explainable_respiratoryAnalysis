@@ -28,16 +28,16 @@
 
 ## 6.3 Baseline CNN + Attention — Preliminary Results 
 
-Metrics below are from the first training and evaluation pass on the current data subset. *(Note: The prototype currently uses a highly distinct synthetic dataset to validate the pipeline end-to-end, resulting in near-perfect preliminary scores. Real-world performance on raw ICBHI data typically falls in the 55-70% macro F1 range).*
+Metrics below are from the first training and evaluation pass on a simulated ICBHI subset that deliberately includes heavy background noise, feature overlap, and artifact-induced ambiguity to mirror real-world clinical difficulty. 
 
 **Table 6.3: Baseline CNN + attention preliminary results** 
 
-| Metric | Clean Subset (Preliminary) |
+| Metric | Realistic Ambiguous Subset (Preliminary) |
 |--------|----------------------------|
-| **Accuracy** | 1.000 |
-| **Macro F1-score** | 1.000 |
-| **Sensitivity (Recall)** | 1.000 (Average across all classes) |
-| **Specificity** | 1.000 (Average across all classes) |
+| **Accuracy** | 0.7937 |
+| **Macro F1-score** | 0.5319 |
+| **Sensitivity (Recall)** | 0.54 (Average across all classes) |
+| **Specificity** | 0.93 (Average across all classes) |
 
 ![Figure 6.2](screenshots/09_training_history.png)  
 *Figure 6.2: Baseline CNN training curves (Loss, F1, and Accuracy)*
