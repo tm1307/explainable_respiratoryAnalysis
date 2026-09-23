@@ -143,6 +143,7 @@ class ICBHIDataset(Dataset):
             padding = self.target_samples - sliced_waveform.shape[1]
             sliced_waveform = F.pad(sliced_waveform, (0, padding))
             
+        sliced_waveform = sliced_waveform.squeeze(0)
         if self.transform:
             sliced_waveform = self.transform(sliced_waveform)
             
