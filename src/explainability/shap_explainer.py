@@ -7,7 +7,6 @@ input, identifying which time-frequency regions drove the model's prediction.
 Key outputs:
   - 2D SHAP heatmap (same shape as input spectrogram) — overlay on spectrogram
   - Per-frequency-band mean |SHAP| — bar chart of low/mid/high band importance
-  - Top attribution mask — binary mask of top-K most important regions
 """
 
 import numpy as np
@@ -62,7 +61,6 @@ class SHAPExplainer:
             )
 
         # shap.GradientExplainer only supports CPU and CUDA — not MPS.
-        # Always force CPU regardless of the device argument.
         self.device = torch.device("cpu")
         self.model = model.cpu().eval()
         self.background = background.cpu()
@@ -89,7 +87,6 @@ class SHAPExplainer:
                                    absolute SHAP values in [0, 1].
             band_importance (Dict[str, float]): Mean |SHAP| per frequency band.
         """
-        # Force CPU — SHAP GradientExplainer does not support MPS
         input_t = input_tensor.cpu()
 
         # shap_values returns a list of arrays, one per output class.
@@ -215,7 +212,6 @@ def compute_shap_heatmap_fast(
     if not SHAP_AVAILABLE:
         return None, None
 
-    # Always use CPU — shap.GradientExplainer does not support MPS
     input_cpu = input_tensor.cpu()
     _, _, n_mels, T = input_cpu.shape
     background = SHAPExplainer.make_background_from_silence(

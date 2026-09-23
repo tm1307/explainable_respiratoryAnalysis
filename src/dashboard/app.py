@@ -9,14 +9,14 @@ Tabs:
   4. Model Performance  — training curves, confusion matrix, faithfulness metrics
 """
 
-# ── Path guard ────────────────────────────────────────────────────────────────
+# Path guard
 # Ensures the project root is on sys.path regardless of how Streamlit is
 # invoked (e.g. `streamlit run src/dashboard/app.py` from any directory).
 import sys, pathlib
 _PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 
 import io
 import os
@@ -26,9 +26,7 @@ import torch
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
 import plotly.graph_objects as go
-import plotly.express as px
 import streamlit as st
 import torchaudio
 
@@ -47,7 +45,7 @@ except ImportError:
     SHAP_AVAILABLE = False
 
 
-# ─── Constants ────────────────────────────────────────────────────────────────
+# Constants
 CLASS_NAMES = ["Normal", "Crackle", "Wheeze", "Both"]
 CLASS_COLORS = {
     "Normal":  "#2d7dd2",
@@ -69,7 +67,7 @@ PALETTE = {
 }
 
 
-# ─── Page config & CSS ────────────────────────────────────────────────────────
+# Page config & CSS
 def apply_custom_css():
     st.markdown(
         f"""
@@ -178,7 +176,7 @@ def apply_custom_css():
     )
 
 
-# ─── Model loading ─────────────────────────────────────────────────────────────
+# Model loading
 @st.cache_resource
 def load_model_and_pipeline():
     model = BaselineCNN(num_classes=4, n_mels=128)
@@ -215,7 +213,7 @@ def load_eval_results():
     return None
 
 
-# ─── Plot helpers ──────────────────────────────────────────────────────────────
+# Plot helpers
 def fig_to_st(fig, dpi=120):
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=dpi, bbox_inches="tight",
@@ -476,13 +474,13 @@ def plotly_faithfulness_bars(ins_auc: float, del_auc: float, aopc_val: float) ->
     return fig
 
 
-# ─── Sidebar ──────────────────────────────────────────────────────────────────
+# Sidebar
 def render_sidebar(is_trained: bool):
     st.sidebar.markdown(
         """
         <div style="padding:1rem 0 0.5rem 0;">
             <div style="font-size:1.2rem;font-weight:700;color:#e8eaf0;">
-                🫁 RespiScan
+                RespiScan
             </div>
             <div style="font-size:0.7rem;color:#8892a4;margin-top:0.15rem;">
                 Explainable Respiratory Sound Analysis
@@ -542,7 +540,7 @@ def render_sidebar(is_trained: bool):
     )
 
 
-# ─── Tab 1: Audio Analysis ────────────────────────────────────────────────────
+# Tab 1: Audio Analysis
 def render_tab_analysis(model, pipeline):
     st.markdown('<div class="section-header">Upload Audio</div>', unsafe_allow_html=True)
     uploaded_file = st.file_uploader(
@@ -557,7 +555,7 @@ def render_tab_analysis(model, pipeline):
             f"""
             <div style="text-align:center;padding:2.5rem 1rem;color:{PALETTE['text_muted']};
                         border:1px dashed {PALETTE['border']};border-radius:8px;margin-top:0.5rem;">
-                <div style="font-size:2rem;margin-bottom:0.5rem;">🎙</div>
+                <div style="font-size:2rem;margin-bottom:0.5rem;">▸</div>
                 <div style="font-size:0.9rem;">Upload a WAV file to begin analysis</div>
                 <div style="font-size:0.75rem;margin-top:0.4rem;">
                     Any respiratory recording — stethoscope, chest mic, etc.
@@ -578,11 +576,7 @@ def render_tab_analysis(model, pipeline):
         waveform  = resampler(waveform)
         sample_rate = 16000
     waveform = waveform.squeeze()
-
-    # Audio player
     st.audio(audio_bytes, format="audio/wav")
-
-    # Info strip
     dur = len(waveform) / sample_rate
     col_a, col_b, col_c = st.columns(3)
     with col_a:
@@ -603,20 +597,14 @@ def render_tab_analysis(model, pipeline):
             f'<div class="metric-value">{len(waveform):,}</div></div>',
             unsafe_allow_html=True,
         )
-
-    # Waveform
     st.markdown('<div class="section-header">Waveform</div>', unsafe_allow_html=True)
     st.image(plot_waveform(waveform, sample_rate), use_container_width=True)
-
-    # Spectrogram
     extractor = MelSpectrogramExtractor(sample_rate=16000)
     wav_fixed = pad_or_truncate(waveform, 16000 * 5)
     mel_spec  = extractor.extract(wav_fixed).squeeze().numpy()
 
     st.markdown('<div class="section-header">Log-Mel Spectrogram</div>', unsafe_allow_html=True)
     st.image(plot_spectrogram(mel_spec), use_container_width=True)
-
-    # Prediction
     st.markdown('<div class="section-header">Classification Result</div>', unsafe_allow_html=True)
     result = pipeline.predict(waveform, run_quality_checks=True)
 
@@ -654,8 +642,6 @@ def render_tab_analysis(model, pipeline):
         use_container_width=True,
         config={"displayModeBar": False},
     )
-
-    # Quality report
     if result.quality_report:
         with st.expander("Audio Quality Report", expanded=False):
             qr = result.quality_report
@@ -668,7 +654,7 @@ def render_tab_analysis(model, pipeline):
     return waveform, mel_spec, result, extractor
 
 
-# ─── Tab 2: Explainability ────────────────────────────────────────────────────
+# Tab 2: Explainability
 def render_tab_explainability(model, waveform, mel_spec, result):
     if result is None:
         st.info("Upload audio in the Analysis tab first.")
@@ -681,7 +667,7 @@ def render_tab_explainability(model, waveform, mel_spec, result):
 
     col_left, col_right = st.columns(2)
 
-    # ── Grad-CAM ──
+    # Grad-CAM
     with col_left:
         st.markdown('<div class="section-header">Grad-CAM Attribution</div>', unsafe_allow_html=True)
         if result.heatmap is not None:
@@ -698,7 +684,8 @@ def render_tab_explainability(model, waveform, mel_spec, result):
         else:
             st.warning("Grad-CAM not available (model hooks not attached).")
 
-    # ── SHAP ──
+    # SHAP
+    band_importance = None
     with col_right:
         st.markdown('<div class="section-header">SHAP Attribution</div>', unsafe_allow_html=True)
         if not SHAP_AVAILABLE:
@@ -725,8 +712,8 @@ def render_tab_explainability(model, waveform, mel_spec, result):
                 st.warning("SHAP computation failed for this input.")
                 band_importance = None
 
-    # ── SHAP Frequency Band Importance ──
-    if SHAP_AVAILABLE and 'band_importance' in dir() and band_importance is not None:
+    # SHAP Frequency Band Importance
+    if SHAP_AVAILABLE and band_importance is not None:
         st.markdown('<div class="section-header">Frequency Band Importance (SHAP)</div>', unsafe_allow_html=True)
         st.plotly_chart(
             plotly_shap_bars(band_importance),
@@ -740,26 +727,8 @@ def render_tab_explainability(model, waveform, mel_spec, result):
             unsafe_allow_html=True,
         )
 
-    # ── Side-by-side comparison note ──
-    if result.heatmap is not None and SHAP_AVAILABLE:
-        st.markdown(
-            f"""
-            <div class="metric-card" style="margin-top:1rem;">
-                <div class="metric-label">Attribution Method Comparison</div>
-                <div style="font-size:0.82rem;color:{PALETTE['text']};line-height:1.6;">
-                    <b>Grad-CAM</b> uses the gradient of the class score w.r.t. the last convolutional
-                    feature map — fast, spatially coarse.<br>
-                    <b>SHAP GradientExplainer</b> uses expected gradients over a reference distribution
-                    (silence baseline) — theoretically grounded (Shapley axioms), pixel-level resolution.
-                    Stable explanations across both methods increase confidence in the attribution.
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
 
-
-# ─── Tab 3: Robustness ────────────────────────────────────────────────────────
+# Tab 3: Robustness
 def render_tab_robustness(pipeline, waveform, mel_spec, result):
     if result is None:
         st.info("Upload audio in the Analysis tab first.")
@@ -886,7 +855,7 @@ def render_tab_robustness(pipeline, waveform, mel_spec, result):
             unsafe_allow_html=True,
         )
 
-    # ── Interactive single-SNR test ──
+    # Interactive single-SNR test
     st.markdown('<div class="section-header">Manual SNR Test</div>', unsafe_allow_html=True)
     snr_db = st.slider("Signal-to-Noise Ratio (dB)", -5, 20, 10, step=1)
     if st.button("Test at this SNR"):
@@ -908,7 +877,7 @@ def render_tab_robustness(pipeline, waveform, mel_spec, result):
                 f'<div class="metric-card"><div class="metric-label">Noisy @ {snr_db} dB</div>'
                 f'<div class="metric-value" style="color:{color};">{r_noisy.label}</div>'
                 f'<div class="metric-sub">{r_noisy.confidence:.1%} confidence'
-                f'{"  ⚠ label changed" if changed else "  ✓ stable"}</div></div>',
+                f'{"  [changed]" if changed else "  [stable]"}</div></div>',
                 unsafe_allow_html=True,
             )
         extractor = MelSpectrogramExtractor(sample_rate=16000)
@@ -918,7 +887,7 @@ def render_tab_robustness(pipeline, waveform, mel_spec, result):
                  use_container_width=True)
 
 
-# ─── Tab 4: Model Performance ─────────────────────────────────────────────────
+# Tab 4: Model Performance
 def render_tab_performance(model, result, input_tensor=None):
     history = load_training_history()
     eval_results = load_eval_results()
@@ -1022,11 +991,11 @@ def render_tab_performance(model, result, input_tensor=None):
     )
 
 
-# ─── Main ─────────────────────────────────────────────────────────────────────
+# Main
 def main():
     st.set_page_config(
         page_title="RespiScan — Respiratory Sound Analysis",
-        page_icon="🫁",
+        page_icon=None,
         layout="wide",
         initial_sidebar_state="expanded",
     )

@@ -6,16 +6,16 @@ The pipeline foundation is complete and covered by 90+ unit tests:
 
 | Component | File | Status |
 |-----------|------|--------|
-| Log-Mel extraction | `src/features/mel_features.py` | ✅ Done |
-| ICBHI data loader (patient-independent GroupKFold) | `src/data/icbhi_dataset.py` | ✅ Done |
-| Noise injection (math-verified SNR) | `src/data/noise_bank.py` | ✅ Done |
-| BaselineCNN + Attention Pooling + FocalLoss | `src/models/baseline_cnn.py` | ✅ Done |
-| Training loop (SpecAugment, noise-aware, FocalLoss) | `src/pipeline/train.py` | ✅ Done |
-| Grad-CAM + SHAP GradientExplainer | `src/explainability/` | ✅ Done |
-| Faithfulness metrics (Insertion/Deletion AUC, AOPC) | `src/metrics/faithfulness.py` | ✅ Done |
-| Stability metrics (SSIM, Spearman, IoU) | `src/metrics/stability.py` | ✅ Done |
-| Joint Reliability Index (JRI) + AURC | `src/metrics/jri.py` | ✅ Done |
-| Interactive dashboard (4-tab clinical UI) | `src/dashboard/app.py` | ✅ Done |
+| Log-Mel extraction | `src/features/mel_features.py` | Done |
+| ICBHI data loader (patient-independent GroupKFold) | `src/data/icbhi_dataset.py` | Done |
+| Noise injection (math-verified SNR) | `src/data/noise_bank.py` | Done |
+| BaselineCNN + Attention Pooling + FocalLoss | `src/models/baseline_cnn.py` | Done |
+| Training loop (SpecAugment, noise-aware, FocalLoss) | `src/pipeline/train.py` | Done |
+| Grad-CAM + SHAP GradientExplainer | `src/explainability/` | Done |
+| Faithfulness metrics (Insertion/Deletion AUC, AOPC) | `src/metrics/faithfulness.py` | Done |
+| Stability metrics (SSIM, Spearman, IoU) | `src/metrics/stability.py` | Done |
+| Joint Reliability Index (JRI) + AURC | `src/metrics/jri.py` | Done |
+| Interactive dashboard (4-tab clinical UI) | `src/dashboard/app.py` | Done |
 
 ---
 

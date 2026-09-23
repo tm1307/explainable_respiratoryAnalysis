@@ -15,7 +15,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any
+from typing import Optional, Dict
 
 from src.pipeline.quality_check import run_quality_check, QualityReport
 from src.features.mel_features import MelSpectrogramExtractor, pad_or_truncate

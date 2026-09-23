@@ -29,10 +29,7 @@ from src.models.classifier import train_model, evaluate
 from src.config import get_default_config
 
 
-# ---------------------------------------------------------------------------
-# ICBHI-realistic class distribution (from the published dataset statistics)
-# Normal: 53.5%, Crackle: 34.7%, Wheeze: 7.5%, Both: 4.3%
-# ---------------------------------------------------------------------------
+# ICBHI-realistic class distribution (Normal: 53.5%, Crackle: 34.7%, Wheeze: 7.5%, Both: 4.3%)
 ICBHI_CLASS_PROBS = [0.535, 0.347, 0.075, 0.043]
 
 
@@ -41,8 +38,6 @@ class SpecAugment(nn.Module):
     SpecAugment: frequency and time masking for mel spectrograms.
     Applied during training to improve generalisation.
 
-    Based on: Park et al., "SpecAugment: A Simple Data Augmentation Method
-    for Automatic Speech Recognition" (2019).
     """
 
     def __init__(
@@ -106,32 +101,61 @@ def make_realistic_synthetic_data(
 
     def _make_sample(label: int, n_mels: int, T: int) -> torch.Tensor:
         """Synthesise a mel spectrogram with class-specific spectral patterns."""
-        # Base: log-normal noise (realistic mel spectrogram background)
-        spec = torch.randn(1, n_mels, T) * 0.5 - 2.0  # log-scale, low energy
+        # Noisy background
+        spec = torch.randn(1, n_mels, T) * 0.8 - 1.5
 
-        if label == 0:  # Normal — relatively flat, low energy
-            pass
+        # Breath envelope (low-frequency rhythms)
+        breath = torch.sin(torch.linspace(0, 4 * 3.1415, T))
+        breath = torch.clamp(breath, 0, 1)
+        spec[0, :30, :] += breath.unsqueeze(0) * 0.8
 
-        elif label == 1:  # Crackle — random high-frequency bursts
-            # Boost top 30% of mel bins at random time positions
-            hi_start = int(0.7 * n_mels)
-            n_bursts = np.random.randint(3, 8)
-            for _ in range(n_bursts):
-                t_start = np.random.randint(0, max(1, T - 8))
-                t_width = np.random.randint(2, 8)
-                spec[0, hi_start:, t_start : t_start + t_width] += np.random.uniform(1.5, 3.0)
+        is_hard = np.random.rand() < 0.4  # 40% of samples are highly ambiguous
 
-        elif label == 2:  # Wheeze — sustained mid-band narrowband energy
-            mid_center = np.random.randint(int(0.3 * n_mels), int(0.6 * n_mels))
-            bw = np.random.randint(3, 8)
-            lo, hi = max(0, mid_center - bw), min(n_mels, mid_center + bw)
-            spec[0, lo:hi, :] += np.random.uniform(1.0, 2.5)
+        if label == 0:  # Normal
+            if is_hard:
+                # Add faint random artifacts
+                spec[0, 50:60, torch.randint(0, T, (1,)).item()] += 0.5 
 
-        elif label == 3:  # Both — crackle + wheeze patterns
-            hi_start = int(0.7 * n_mels)
-            spec[0, hi_start:, : T // 3] += np.random.uniform(1.0, 2.0)
-            mid_center = np.random.randint(int(0.3 * n_mels), int(0.6 * n_mels))
-            spec[0, mid_center - 3 : mid_center + 3, :] += np.random.uniform(1.0, 2.0)
+        elif label == 1:  # Crackle
+            n_b = torch.randint(3, 8, (1,)).item()
+            for _ in range(n_b):
+                t_pos = torch.randint(0, T - 2, (1,)).item()
+                f_s = torch.randint(60, 100, (1,)).item()
+                burst = torch.rand(1).item() * 1.5 + 1.0
+                if is_hard: burst *= 0.5
+                spec[0, f_s:min(f_s+20, n_mels), t_pos:t_pos+2] += burst
+
+        elif label == 2:  # Wheeze
+            n_w = torch.randint(1, 3, (1,)).item()
+            for _ in range(n_w):
+                f_b = torch.randint(40, 80, (1,)).item()
+                t_s = torch.randint(0, T // 2, (1,)).item()
+                t_e = min(t_s + torch.randint(T // 4, T // 2, (1,)).item(), T)
+                whz = torch.rand(1).item() * 1.5 + 1.0
+                if is_hard: whz *= 0.4
+                spec[0, f_b:f_b+5, t_s:t_e] += whz * breath[t_s:t_e]
+
+        elif label == 3:  # Both
+            f_b = torch.randint(40, 80, (1,)).item()
+            t_s = torch.randint(0, T // 2, (1,)).item()
+            t_e = min(t_s + torch.randint(T // 4, T // 2, (1,)).item(), T)
+            whz = torch.rand(1).item() * 1.2 + 0.8
+            if is_hard: whz *= 0.5
+            spec[0, f_b:f_b+5, t_s:t_e] += whz * breath[t_s:t_e]
+            
+            n_b = torch.randint(2, 6, (1,)).item()
+            for _ in range(n_b):
+                t_pos = torch.randint(0, T - 2, (1,)).item()
+                f_s = torch.randint(60, 100, (1,)).item()
+                burst = torch.rand(1).item() * 1.0 + 0.8
+                if is_hard: burst *= 0.5
+                spec[0, f_s:min(f_s+15, n_mels), t_pos:t_pos+2] += burst
+
+        # Random hospital noise to 30% of samples (simulate clinical setting)
+        if np.random.rand() < 0.3:
+            t_p = torch.randint(0, T - 5, (1,)).item()
+            f_p = torch.randint(20, 110, (1,)).item()
+            spec[0, f_p:f_p+3, t_p:t_p+5] += 2.0
 
         return spec
 
@@ -251,7 +275,7 @@ Examples:
     )
     print(f"Device: {device}")
 
-    # ── Data ──────────────────────────────────────────────────────────────────
+    # Data
     if args.icbhi:
         print("Loading ICBHI dataset...")
         train_loader, val_loader, class_weights = load_icbhi_data(config, args.batch_size)
@@ -290,7 +314,7 @@ Examples:
         print("Error: specify --synthetic or --icbhi. Run with --help for usage.")
         return
 
-    # ── Model ─────────────────────────────────────────────────────────────────
+    # Model
     model = BaselineCNN(
         num_classes=config.model.num_classes,
         n_mels=config.mel.n_mels,
@@ -306,7 +330,7 @@ Examples:
         optimizer, T_max=args.epochs, eta_min=1e-5
     )
 
-    # ── Augmentation ──────────────────────────────────────────────────────────
+    # Augmentation
     spec_aug = SpecAugment(
         freq_mask_param=config.augment.spec_augment_freq_width,
         time_mask_param=config.augment.spec_augment_time_width,
@@ -325,7 +349,7 @@ Examples:
             x = noise_fn(x)
         return x
 
-    # ── Training ──────────────────────────────────────────────────────────────
+    # Training
     print(f"\nStarting training for up to {args.epochs} epochs...")
     print(f"  SpecAugment: ON")
     print(f"  Noise-Aware: {'ON' if args.noise_aware else 'OFF'}")
@@ -345,11 +369,7 @@ Examples:
         num_classes=config.model.num_classes,
     )
 
-    # Step scheduler after training (for LR tracking only)
-    for _ in range(len(history)):
-        scheduler.step()
-
-    # ── Save outputs ──────────────────────────────────────────────────────────
+    # Save outputs
     os.makedirs("models", exist_ok=True)
 
     # Model weights

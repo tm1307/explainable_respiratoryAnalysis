@@ -50,14 +50,14 @@ def save_fig(fig, name):
     print(f"  Saved: {name}.png  ({size_kb:.0f} KB)")
 
 
-# ── Load model & pipeline ──────────────────────────────────────────
+# Load model & pipeline
 model = BaselineCNN(num_classes=4, n_mels=128)
 model.load_state_dict(torch.load("models/baseline_cnn.pt", map_location="cpu", weights_only=True))
 model.eval()
 pipeline  = InferencePipeline(model, device="cpu", enable_explainability=True)
 extractor = MelSpectrogramExtractor(sample_rate=16000)
 
-# ── Load wheeze WAV ────────────────────────────────────────────────
+# Load wheeze WAV
 waveform, _ = torchaudio.load("test_audio/wheeze.wav")
 waveform    = waveform.squeeze()
 wav_fixed   = pad_or_truncate(waveform, 16000 * 5)
@@ -66,9 +66,7 @@ input_tensor = extractor.extract(wav_fixed).unsqueeze(0)
 
 print("\nGenerating figures for wheeze.wav ...\n")
 
-# ══════════════════════════════════════════════════════════════════
 # 1 — Waveform
-# ══════════════════════════════════════════════════════════════════
 t = np.linspace(0, len(waveform) / 16000, len(waveform))
 fig, ax = plt.subplots(figsize=(12, 2.8)); fig.patch.set_facecolor(DARK); style_ax(ax)
 ax.fill_between(t, waveform.numpy(), alpha=0.6, color=ACCENT)
@@ -79,9 +77,7 @@ ax.set_title("Wheeze — Raw Waveform  (5 s · 16 kHz · mono)", pad=8)
 plt.tight_layout(pad=0.8)
 save_fig(fig, "01_waveform")
 
-# ══════════════════════════════════════════════════════════════════
 # 2 — Log-Mel Spectrogram
-# ══════════════════════════════════════════════════════════════════
 fig, ax = plt.subplots(figsize=(12, 4)); fig.patch.set_facecolor(DARK); style_ax(ax)
 im = ax.imshow(mel_spec, aspect="auto", origin="lower", cmap="magma")
 ax.set_xlabel("Time Frame"); ax.set_ylabel("Mel Bin")
@@ -92,9 +88,7 @@ cb.set_label("Log Energy", color=MUTED, fontsize=7)
 plt.tight_layout(pad=0.8)
 save_fig(fig, "02_log_mel_spectrogram")
 
-# ══════════════════════════════════════════════════════════════════
 # 3 — Prediction + Class Probabilities
-# ══════════════════════════════════════════════════════════════════
 result = pipeline.predict(waveform, run_quality_checks=False)
 print(f"  Predicted: {result.label}  Confidence: {result.confidence:.1%}  Reliability: {result.reliability_flag}")
 
@@ -126,9 +120,7 @@ for bar, val in zip(bars, probs):
 plt.tight_layout(pad=1.0)
 save_fig(fig, "03_prediction_and_probabilities")
 
-# ══════════════════════════════════════════════════════════════════
 # 4 — Grad-CAM Overlay
-# ══════════════════════════════════════════════════════════════════
 if result.heatmap is not None:
     fig, axes = plt.subplots(1, 2, figsize=(14, 4)); fig.patch.set_facecolor(DARK)
     for ax in axes:
@@ -146,9 +138,7 @@ if result.heatmap is not None:
     plt.tight_layout(pad=1.0)
     save_fig(fig, "04_gradcam_overlay")
 
-# ══════════════════════════════════════════════════════════════════
 # 5 — SHAP Overlay + Band Importance
-# ══════════════════════════════════════════════════════════════════
 print("  Computing SHAP (CPU)...")
 shap_map, band_importance = compute_shap_heatmap_fast(
     model, input_tensor, result.label_index, n_background=8
@@ -187,9 +177,7 @@ if shap_map is not None:
     save_fig(fig, "05_shap_overlay_and_bands")
     print(f"  Bands: Low={vals_b[0]:.3f}  Mid={vals_b[1]:.3f}  High={vals_b[2]:.3f}")
 
-# ══════════════════════════════════════════════════════════════════
 # 6 — SNR Robustness Sweep
-# ══════════════════════════════════════════════════════════════════
 print("  Running SNR sweep (6 levels)...")
 snr_levels   = [20, 15, 10, 5, 0, -5]
 confidences, labels_sw, shap_ssims = [], [], []
@@ -244,9 +232,7 @@ if valid:
 plt.tight_layout(pad=1.2)
 save_fig(fig, "06_snr_robustness_sweep")
 
-# ══════════════════════════════════════════════════════════════════
 # 7 — JRI Table + Curve
-# ══════════════════════════════════════════════════════════════════
 clean_conf = result.confidence
 robust_vals, stab_vals, jri_vals, naive_vals = [], [], [], []
 for conf, ssim_v in zip(confidences, shap_ssims):
@@ -290,9 +276,7 @@ axes[1].set_title("JRI Ablation — Why Naive Average Misleads", pad=8)
 plt.tight_layout(pad=1.2)
 save_fig(fig, "07_jri_vs_snr_and_ablation_table")
 
-# ══════════════════════════════════════════════════════════════════
 # 8 — Faithfulness Metrics
-# ══════════════════════════════════════════════════════════════════
 print("  Computing faithfulness metrics...")
 ins = dlt = aop = None
 if result.heatmap is not None:
@@ -336,9 +320,7 @@ if result.heatmap is not None:
     plt.tight_layout(pad=1.2)
     save_fig(fig, "08_faithfulness_metrics")
 
-# ══════════════════════════════════════════════════════════════════
 # 9 — Training History
-# ══════════════════════════════════════════════════════════════════
 with open("models/training_history.json") as f:
     history = json.load(f)
 
@@ -367,9 +349,7 @@ ax1.legend(lines1 + lines2, lab1 + lab2, fontsize=9,
 plt.tight_layout(pad=1.0)
 save_fig(fig, "09_training_history")
 
-# ══════════════════════════════════════════════════════════════════
 # 10 — Full Results Summary Table
-# ══════════════════════════════════════════════════════════════════
 with open("models/eval_results.json") as f:
     ev = json.load(f)
 
@@ -412,5 +392,5 @@ ax.set_title("Complete Results Summary — Wheeze Test (wheeze.wav)",
 plt.tight_layout()
 save_fig(fig, "10_results_summary_table")
 
-# ── Done ──────────────────────────────────────────────────────────
+# Done
 print(f"\nAll figures saved to screenshots/  ({len(os.listdir('screenshots'))} files)")
