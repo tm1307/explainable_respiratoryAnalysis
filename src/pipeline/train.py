@@ -343,11 +343,8 @@ Examples:
         patience=config.train.patience,
         noise_fn=augment_fn,
         num_classes=config.model.num_classes,
+        scheduler=scheduler,
     )
-
-    # Step scheduler after training (for LR tracking only)
-    for _ in range(len(history)):
-        scheduler.step()
 
     # ── Save outputs ──────────────────────────────────────────────────────────
     os.makedirs("models", exist_ok=True)

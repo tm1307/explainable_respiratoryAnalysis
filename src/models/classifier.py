@@ -208,6 +208,7 @@ def train_model(
     patience: int = 10,
     noise_fn=None,
     num_classes: int = 4,
+    scheduler=None,
 ) -> Tuple[nn.Module, List[Dict]]:
     """
     Full training loop with early stopping and validation monitoring.
@@ -223,6 +224,8 @@ def train_model(
         patience: Early stopping patience.
         noise_fn: Optional noise injection function for noise-aware training.
         num_classes: Number of classes.
+        scheduler: Optional LR scheduler. If provided, scheduler.step() is called
+                   after each epoch.
 
     Returns:
         Tuple of (best_model, history) where history is a list of dicts
@@ -257,6 +260,10 @@ def train_model(
         # Early stopping check
         if early_stopping(val_metrics["f1_macro"]):
             break
+
+        # Step learning rate scheduler
+        if scheduler is not None:
+            scheduler.step()
 
     # Restore best model
     if best_model_state is not None:

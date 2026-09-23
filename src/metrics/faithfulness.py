@@ -2,6 +2,9 @@ import torch
 import numpy as np
 from typing import Any
 
+# NumPy 2.0 renamed np.trapz to np.trapezoid; support both versions.
+_trapezoid = getattr(np, "trapezoid", None) or np.trapz
+
 def insertion_auc(model: Any, input_tensor: torch.Tensor, attribution_map: np.ndarray, target_class: int, n_steps: int = 100, device: str = 'cpu') -> float:
     """
     Progressively insert top-attributed time-frequency regions into a blank (zero) input.
@@ -43,7 +46,7 @@ def insertion_auc(model: Any, input_tensor: torch.Tensor, attribution_map: np.nd
             else:
                 probs.append(probs[-1])
                 
-    return float(np.trapezoid(probs, dx=1.0 / n_steps))
+    return float(_trapezoid(probs, dx=1.0 / n_steps))
 
 def deletion_auc(model: Any, input_tensor: torch.Tensor, attribution_map: np.ndarray, target_class: int, n_steps: int = 100, device: str = 'cpu') -> float:
     """
@@ -84,7 +87,7 @@ def deletion_auc(model: Any, input_tensor: torch.Tensor, attribution_map: np.nda
             else:
                 probs.append(probs[-1])
                 
-    return float(np.trapezoid(probs, dx=1.0 / n_steps))
+    return float(_trapezoid(probs, dx=1.0 / n_steps))
 
 def aopc(model: Any, input_tensor: torch.Tensor, attribution_map: np.ndarray, target_class: int, K: int = 10, device: str = 'cpu') -> float:
     """
