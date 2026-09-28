@@ -1,8 +1,12 @@
 venv/
 __pycache__/
 *.pyc
+*.pyo
 .DS_Store
 *.egg-info/
-models/
 test_audio/
 .pytest_cache/
+output.txt
+/archive/
+/data/
+/models/val_data.pt

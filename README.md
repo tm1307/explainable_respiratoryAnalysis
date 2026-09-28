@@ -1,4 +1,4 @@
-# AI-Based Respiratory Sound Screening 🫁🩺
+# AI-Based Respiratory Sound Screening
 *Noise-Aware Classification & Explainability Validation*
 
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
@@ -9,9 +9,9 @@ This repository hosts the implementation for evaluating the robustness and expla
 
 ---
 
-## 🚀 Master Implementation Plan
+## Master Implementation Plan
 
-### 🛠 Tech Stack Recommendations
+### Tech Stack Recommendations
 
 | Component | Recommended Tooling | Justification |
 |-----------|--------------------|---------------|
@@ -25,7 +25,7 @@ This repository hosts the implementation for evaluating the robustness and expla
 | **XAI Evaluation** | `Quantus` toolkit | Essential for systematically quantifying explanation degradation (faithfulness, stability) under noise. |
 | **Experiment Tracking** | Weights & Biases / MLflow | For managing the SNR × model × XAI-method experiment grid. |
 
-### 📅 Phased Development Timeline
+### Phased Development Timeline
 
 1. **Phase 1 (Data & Noise)**: Data audit, build patient-independent stratified train/val/test splits, construct noise-bank with mixing utilities.
 2. **Phase 2 (Baselines)**: Feature extraction (Log-Mel + PANNs embeddings) and training the baseline CNN model on clean data.
@@ -35,7 +35,7 @@ This repository hosts the implementation for evaluating the robustness and expla
 
 ---
 
-## 🧪 Testing & Validation Protocols
+## Testing & Validation Protocols
 
 ### 1. Research Validation Protocol
 To ensure the claims are scientifically robust and defensible:

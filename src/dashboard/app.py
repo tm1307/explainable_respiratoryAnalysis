@@ -499,7 +499,7 @@ def render_sidebar(is_trained: bool):
             MODEL STATUS
         </div>
         <div style="font-size:0.85rem;color:{status_color};margin-bottom:1rem;">
-            ● {model_status}
+            {model_status}
         </div>
         """,
         unsafe_allow_html=True,
@@ -555,10 +555,10 @@ def render_tab_analysis(model, pipeline):
             f"""
             <div style="text-align:center;padding:2.5rem 1rem;color:{PALETTE['text_muted']};
                         border:1px dashed {PALETTE['border']};border-radius:8px;margin-top:0.5rem;">
-                <div style="font-size:2rem;margin-bottom:0.5rem;">▸</div>
-                <div style="font-size:0.9rem;">Upload a WAV file to begin analysis</div>
+                <div style="font-size:0.95rem;font-weight:600;margin-bottom:0.4rem;color:{PALETTE['text']};">Upload Audio File</div>
+                <div style="font-size:0.85rem;">Select a WAV recording to begin analysis</div>
                 <div style="font-size:0.75rem;margin-top:0.4rem;">
-                    Any respiratory recording — stethoscope, chest mic, etc.
+                    Respiratory sound formats supported: 16 kHz WAV, stethoscope, chest microphone
                 </div>
             </div>
             """,
