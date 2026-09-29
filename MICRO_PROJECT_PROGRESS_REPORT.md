@@ -79,10 +79,10 @@ The next phase of the project will focus on expanding the validated baseline int
 5. **Cross-Corpus Generalization —** conducting zero-shot evaluations on external public databases (HF_Lung_V1) to quantify the clinical generalization gap across varying diagnostic recording hardware.
 6. **Point-of-Care Edge Optimization —** exporting the pipeline via ONNX Runtime and TorchScript to evaluate latency and memory limits for digital stethoscope integration.
 
-### Real System Outputs & Experimental Validation:
+### Real System Explainability Outputs:
 
-![Real System Outputs](screenshots/real_system_outputs.png)
-*Figure 2: Real experimental outputs — (a) Grad-CAM activation map on Log-Mel Spectrogram, (b) SHAP pixel attribution and clinical frequency band decomposition, (c) Confusion Matrix on 1,497 ICBHI validation samples.*
+![Real System Explainability Outputs](screenshots/real_xai_diagram.png)
+*Figure 2: Real experimental outputs — (a) Grad-CAM spatial activation map on Log-Mel Spectrogram, (b) SHAP pixel attribution and clinical frequency band decomposition (Low: 50–500 Hz, Mid: 500–2k Hz, High: 2k–8k Hz).*
 
 ---
 
