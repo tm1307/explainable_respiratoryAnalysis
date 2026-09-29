@@ -31,74 +31,58 @@
 
 ---
 
-## 1. WORK DONE DURING THE PERIOD
+## WORK DONE DURING THE PERIOD
 
-### A. Data Preparation and Preprocessing
-* **Official ICBHI 2017 Integration:** Downloaded and ingested the complete 2.0 GB ICBHI database comprising 920 multi-channel stethoscope audio files and corresponding clinician annotations (6,898 extracted respiratory cycles).
-* **Patient-Independent Partitioning:** Implemented `GroupKFold` cross-validation grouped strictly by `patient_id` (5,401 train / 1,497 validation cycles). This ensures complete isolation between subjects, preventing artificial diagnostic inflation caused by stethoscope acoustic overfitting.
-* **Acoustic Feature Extraction:** Audio is converted to single-channel mono, resampled to 16 kHz, and transformed via Short-Time Fourier Transform (STFT) into 128-band Log-Mel Spectrograms ($f_{\min}=50\text{ Hz}, f_{\max}=8000\text{ Hz}, \text{hop}=512, \text{window}=1024$):
+### 1. Data Preparation and Preprocessing
+* Ingested the complete official ICBHI 2017 Respiratory Sound Database (~2.0 GB, 920 recordings, 6,898 extracted respiratory cycles).
+* Enforced strict Patient-Independent `GroupKFold` cross-validation (5,401 train / 1,497 val) to prevent diagnostic leakage across splits.
+* Extracted 128-band Log-Mel Spectrograms at 16 kHz (STFT window=1024, hop=512) capturing adventitious crackles and wheezes (50–8000 Hz):
 
-$$m = 2595 \log_{10}\left(1 + \frac{f}{700}\right), \quad S(t, f) = \log\left(P_{\text{mel}}(t, f) + 10^{-6}\right)$$
+$$m = 2595 \cdot \log_{10}\left(1 + \frac{f}{700}\right), \quad S(t, f) = \log\left(P_{\text{mel}}(t, f) + 10^{-6}\right)$$
 
-### B. Model Architecture & Class Imbalance Optimization
-* **Temporal Attention Pooling:** Replaced uniform Global Average Pooling (GAP) with a learned temporal attention mechanism over convolutional feature maps. This allows the network to weight transient 10–20 ms adventitious crackle bursts without temporal dilution over 5-second analysis windows:
+### 2. Model Architecture & Imbalance Optimization
+* Engineered a 4-stage convolutional backbone with Temporal Attention Pooling to dynamically weight transient 10–20 ms crackle bursts without temporal dilution:
 
-$$\alpha_t = \text{Softmax}\left(W_2 \tanh(W_1 h_t)\right), \quad z = \sum_{t=1}^T \alpha_t h_t$$
+$$\alpha_t = \frac{\exp(u_t^T v)}{\sum_{\tau=1}^T \exp(u_\tau^T v)}, \quad z = \sum_{t=1}^T \alpha_t h_t$$
 
-* **Focal Loss with Inverse Weighting:** To counteract extreme class imbalance (Normal: 54%, Crackle: 33%, Wheeze: 8%, Both: 4%), trained the network using $\gamma=2.0$ Focal Loss combined with dynamic class-frequency weighting $\alpha_t$ and SpecAugment (time and frequency masking):
+* Trained using SpecAugment and Focal Loss ($\gamma=2.0$) with inverse frequency weighting to counteract severe class imbalance (Normal: 54%, Crackle: 33%, Wheeze: 8%, Both: 4%):
 
 $$\text{FL}(p_t) = -\alpha_t (1 - p_t)^\gamma \log(p_t)$$
 
-### C. Dual Explainability (XAI) & Faithfulness Verification
-* **Multi-Scale Attribution:** Integrated coarse spatial localization via **Grad-CAM** on the penultimate convolutional layer, alongside granular pixel-level attributions via **SHAP GradientExplainer**.
-* **Clinical Frequency Band Decomposition:** Decomposed SHAP attribution mass into standardized pulmonology diagnostic bands: Low (50–500 Hz: vesicular sounds), Mid (500–2 kHz: wheezes), and High (2–8 kHz: crackle transients).
-* **Mathematical Faithfulness:** Quantified explanation validity using **Insertion AUC** (progressive feature recovery from blank), **Deletion AUC** (progressive feature removal), and **AOPC** (Area Over Perturbation Curve).
+### 3. Dual Explainability (XAI) & Joint Reliability Index (JRI)
+* Integrated dual attributions combining coarse spatial activation (Grad-CAM) with game-theoretic pixel attributions (SHAP GradientExplainer) decomposed into Low (50–500 Hz), Mid (500–2 kHz), and High (2–8 kHz) frequency bands.
+* Formulated the Joint Reliability Index as the harmonic mean of predictive robustness ($R$) and explanation stability ($S$ via SSIM):
 
-### D. Robustness & Joint Reliability Index (JRI)
-* **Controlled Noise Sweeps:** Programmed systematic SNR degradation tests from Clean down to 0 dB using calibrated Gaussian and ambient noise injection.
-* **Harmonic Reliability Formulation:** Established the **Joint Reliability Index (JRI)** to penalize decoupled models that preserve high predictive accuracy ($R$) purely through spurious noise correlation while explanation stability ($S$) collapses:
-
-$$\text{JRI} = \frac{2 \cdot R \cdot S}{R + S}$$
-
-### E. Clinical Screening Prototype
-* Built an interactive Streamlit application featuring instant test audio presets, multi-tab diagnostics, dual heatmap visualizations, live SNR stress-testing, and automated model verification (104/104 passing tests).
+$$\text{JRI} = \frac{2 \cdot R \cdot S}{R + S}, \quad R = \frac{\text{F1}_{\text{noisy}}}{\text{F1}_{\text{clean}}}, \quad S = \text{SSIM}(E_{\text{clean}}, E_{\text{noisy}})$$
 
 ---
 
-## 2. STATUS / STAGE OF THE PROJECT
+## STATUS / STAGE OF THE PROJECT
 
 **Current Stage:** **Stage 3: Functional Prototype & Baseline Benchmark Complete (Proof-of-Concept / Alpha Phase)**  
 * **Cumulative Milestone Progress:** **85%**
 * **Validation Accuracy:** **48.03%** | **Validation Macro F1:** **34.72%** (Patient-independent benchmark)
 
-![Project Progress Timeline](screenshots/progress_timeline.png)
+![Project Progress Timeline](screenshots/progress_timeline_clean.png)
 *Figure 1: Cumulative milestone progression across the 20-day development cycle (Current Progress: 85%)*
-
-### Real Model Outputs from ICBHI Baseline:
-
-| Confusion Matrix (Real ICBHI Val Set, n=1,497) | Real Output: Grad-CAM Spatial Activation |
-|:---:|:---:|
-| ![Confusion Matrix](screenshots/11_confusion_matrix.png) | ![Grad-CAM](screenshots/04_gradcam_overlay.png) |
-
-| SHAP Explanations & Frequency Bands | Robustness Degradation & JRI Sweep |
-|:---:|:---:|
-| ![SHAP](screenshots/05_shap_overlay_and_bands.png) | ![JRI](screenshots/07_jri_vs_snr_and_ablation_table.png) |
 
 ---
 
-## 3. NEXT PHASE: IMPLEMENTATION AND EXPERIMENTATION
+## NEXT PHASE: IMPLEMENTATION AND EXPERIMENTATION
 
-The next phase will expand the validated prototype into advanced experimental benchmarking:
+The next phase of the project will focus on expanding the validated baseline into advanced experimental validation:
 
-1. **Advanced Audio Backbones:** Benchmark self-supervised pre-trained architectures (Audio Spectrogram Transformer / AST, PaSST, PANNs CNN14) to enhance minority class recall on Wheeze and Both categories.
-2. **Supervised Contrastive Learning (SupCon):** Incorporate contrastive loss formulations on acoustic embeddings to improve topological boundary separation between faint adventitious sounds and baseline vesicular breathing.
-3. **Noise-Aware Multi-SNR Training:** Train a multi-model grid with randomized on-the-fly SNR injection to demonstrate empirical gains in the Joint Reliability Index.
-4. **Real Hospital Noise Injection:** Substitute synthetic Gaussian noise with non-stationary clinical acoustic recordings (ICU alarms, stethoscope friction, ambient chatter) from the ESC-50 and FreeSound databases.
-5. **Cross-Corpus Generalization:** Conduct zero-shot evaluation on external public databases (HF_Lung_V1) to quantify the clinical generalization gap across varying diagnostic recording hardware.
-6. **Edge Optimization:** Export the model pipeline via ONNX Runtime and TorchScript to evaluate latency, memory footprint, and CPU execution limits for digital stethoscope integration.
+1. **Advanced Audio Backbones —** benchmarking self-supervised foundation audio models (AST, PaSST, PANNs CNN14) to improve recall on minority classes (Wheeze & Both).
+2. **Supervised Contrastive Learning —** incorporating SupCon loss on acoustic embeddings to improve topological boundary separation between faint wheezes and regular breathing.
+3. **Noise-Aware Multi-SNR Training —** training with dynamic on-the-fly SNR injection to demonstrate measurable empirical improvements in the Joint Reliability Index.
+4. **Hospital Acoustic Artifacts —** evaluating non-stationary hospital soundscapes (ICU monitors, stethoscope friction, ambient chatter) from the ESC-50 dataset.
+5. **Cross-Corpus Generalization —** conducting zero-shot evaluations on external public databases (HF_Lung_V1) to quantify the clinical generalization gap across varying diagnostic recording hardware.
+6. **Point-of-Care Edge Optimization —** exporting the pipeline via ONNX Runtime and TorchScript to evaluate latency and memory limits for digital stethoscope integration.
 
-![Next Phase Roadmap](screenshots/next_phase_diagram.png)
-*Figure 2: Experimental research cycle and scaling roadmap for the upcoming project phase*
+### Real System Outputs & Experimental Validation:
+
+![Real System Outputs](screenshots/real_system_outputs.png)
+*Figure 2: Real experimental outputs — (a) Grad-CAM activation map on Log-Mel Spectrogram, (b) SHAP pixel attribution and clinical frequency band decomposition, (c) Confusion Matrix on 1,497 ICBHI validation samples.*
 
 ---
 
