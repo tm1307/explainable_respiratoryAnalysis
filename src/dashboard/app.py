@@ -478,95 +478,97 @@ def plotly_faithfulness_bars(ins_auc: float, del_auc: float, aopc_val: float) ->
 def render_sidebar(is_trained: bool):
     st.sidebar.markdown(
         """
-        <div style="padding:1rem 0 0.5rem 0;">
+        <div style="padding:0.6rem 0 0.2rem 0;">
             <div style="font-size:1.2rem;font-weight:700;color:#e8eaf0;">
                 RespiScan
             </div>
-            <div style="font-size:0.7rem;color:#8892a4;margin-top:0.15rem;">
-                Explainable Respiratory Sound Analysis
+            <div style="font-size:0.75rem;color:#8892a4;margin-top:0.15rem;">
+                Acoustic Stethoscope Diagnostic System
             </div>
         </div>
-        <hr style="border-color:#2a3145;margin:0.5rem 0;">
+        <hr style="border-color:#2a3145;margin:0.5rem 0 1rem 0;">
         """,
         unsafe_allow_html=True,
     )
 
-    model_status = "Trained model loaded" if is_trained else "Untrained (demo mode)"
-    status_color = PALETTE["success"] if is_trained else PALETTE["warning"]
+    st.sidebar.markdown(
+        f'<div style="font-size:0.72rem;font-weight:600;letter-spacing:0.05em;color:{PALETTE["text_muted"]};margin-bottom:0.4rem;">QUICK TEST AUDIO</div>',
+        unsafe_allow_html=True,
+    )
+
+    sample_options = {
+        "Upload Custom File": None,
+        "Sample 1: Normal Breathing": "test_audio/normal_breathing.wav",
+        "Sample 2: Crackles": "test_audio/crackle.wav",
+        "Sample 3: Wheezes": "test_audio/wheeze.wav",
+        "Sample 4: Crackles & Wheezes": "test_audio/both_crackle_wheeze.wav",
+    }
+
+    selected_sample = st.sidebar.selectbox(
+        "Select Audio",
+        options=list(sample_options.keys()),
+        index=0,
+        label_visibility="collapsed",
+    )
+    st.session_state["selected_sample_path"] = sample_options[selected_sample]
+
     st.sidebar.markdown(
         f"""
-        <div style="font-size:0.72rem;color:{PALETTE['text_muted']};margin-top:0.8rem;">
-            MODEL STATUS
+        <hr style="border-color:#2a3145;margin:1.2rem 0 0.8rem 0;">
+        <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.05em;color:{PALETTE['text_muted']};margin-bottom:0.6rem;">CLINICAL REFERENCE</div>
+        <div style="font-size:0.78rem;color:{PALETTE['text']};line-height:1.6;">
+            <b>Normal:</b> Clear breath sounds across inspiratory and expiratory phases.<br><br>
+            <b>Crackles:</b> Discontinuous clicking or popping sounds (pneumonia, bronchitis, fibrosis).<br><br>
+            <b>Wheezes:</b> Continuous high-pitched musical whistling (asthma, COPD).<br><br>
+            <b>Both:</b> Concurrent crackles and wheezes indicating multi-focal pathology.
         </div>
-        <div style="font-size:0.85rem;color:{status_color};margin-bottom:1rem;">
-            {model_status}
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    if not is_trained:
-        st.sidebar.info(
-            "Train the model first:\n\n"
-            "```bash\npython -m src.pipeline.train \\\n"
-            "  --synthetic --epochs 30\n```"
-        )
-
-    st.sidebar.markdown(
-        f"""
-        <div style="font-size:0.72rem;color:{PALETTE['text_muted']};margin-top:1rem;">
-            PIPELINE
-        </div>
-        <div style="font-size:0.8rem;color:{PALETTE['text']};line-height:1.8;margin-bottom:1rem;">
-            1 · Quality check<br>
-            2 · Log-Mel extraction<br>
-            3 · BaselineCNN inference<br>
-            4 · Grad-CAM + SHAP<br>
-            5 · JRI reliability score
-        </div>
-        <hr style="border-color:#2a3145;">
-        <div style="font-size:0.72rem;color:{PALETTE['text_muted']};margin-top:0.8rem;">
-            DATASET · ICBHI 2017<br>
-            CLASSES · Normal / Crackle / Wheeze / Both<br>
-            MODEL · 4-block CNN + Attention Pool<br>
-            XAI · Grad-CAM + SHAP GradientExplainer
+        <hr style="border-color:#2a3145;margin:1.2rem 0 0.8rem 0;">
+        <div style="font-size:0.72rem;color:{PALETTE['text_muted']};line-height:1.5;">
+            Format: 16 kHz mono WAV<br>
+            Window: 5.0 seconds
         </div>
         """,
-        unsafe_allow_html=True,
-    )
-    st.sidebar.markdown(
-        '<div class="disclaimer">Research prototype — not for clinical use.</div>',
         unsafe_allow_html=True,
     )
 
 
 # Tab 1: Audio Analysis
 def render_tab_analysis(model, pipeline):
-    st.markdown('<div class="section-header">Upload Audio</div>', unsafe_allow_html=True)
-    uploaded_file = st.file_uploader(
-        "Drop a .wav respiratory recording here",
-        type=["wav"],
-        help="Mono or stereo WAV, any sample rate. Will be resampled to 16 kHz.",
-        label_visibility="collapsed",
-    )
+    st.markdown('<div class="section-header">Audio Input</div>', unsafe_allow_html=True)
+    
+    selected_sample_path = st.session_state.get("selected_sample_path")
+    audio_bytes = None
 
-    if uploaded_file is None:
+    if selected_sample_path and os.path.exists(selected_sample_path):
+        sample_title = os.path.basename(selected_sample_path).replace(".wav", "").replace("_", " ").title()
+        st.info(f"Loaded preset: **{sample_title}** (`{selected_sample_path}`). Choose 'Upload Custom File' in sidebar to upload a new recording.")
+        with open(selected_sample_path, "rb") as f:
+            audio_bytes = f.read()
+    else:
+        uploaded_file = st.file_uploader(
+            "Drop a .wav respiratory recording here",
+            type=["wav"],
+            help="Mono or stereo WAV, any sample rate. Will be resampled to 16 kHz.",
+            label_visibility="collapsed",
+        )
+        if uploaded_file is not None:
+            audio_bytes = uploaded_file.read()
+
+    if audio_bytes is None:
         st.markdown(
             f"""
             <div style="text-align:center;padding:2.5rem 1rem;color:{PALETTE['text_muted']};
                         border:1px dashed {PALETTE['border']};border-radius:8px;margin-top:0.5rem;">
-                <div style="font-size:0.95rem;font-weight:600;margin-bottom:0.4rem;color:{PALETTE['text']};">Upload Audio File</div>
-                <div style="font-size:0.85rem;">Select a WAV recording to begin analysis</div>
+                <div style="font-size:0.95rem;font-weight:600;margin-bottom:0.4rem;color:{PALETTE['text']};">Upload Audio File or Select a Sample</div>
+                <div style="font-size:0.85rem;">Select a preset from the sidebar or drag-and-drop a WAV recording here</div>
                 <div style="font-size:0.75rem;margin-top:0.4rem;">
-                    Respiratory sound formats supported: 16 kHz WAV, stethoscope, chest microphone
+                    Supported formats: 16 kHz WAV, stethoscope, chest microphone
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
         return None, None, None, None
-
-    audio_bytes = uploaded_file.read()
     waveform, sample_rate = torchaudio.load(io.BytesIO(audio_bytes))
 
     if waveform.shape[0] > 1:
